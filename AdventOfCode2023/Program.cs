@@ -2,3 +2,4 @@
 Console.WriteLine("\n🎅🎅🎅🎅🎅 ADVENT OF CODE 2023 🎅🎅🎅🎅🎅\n");
 
 await new Day1().Run();
+await new Day2().Run();
