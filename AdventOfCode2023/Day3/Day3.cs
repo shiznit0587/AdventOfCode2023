@@ -6,37 +6,31 @@ class Day3
 
         Console.WriteLine("Running Day 3 - Part 1");
 
-        List<NumberData> numbers = new List<NumberData>();
-        List<SymbolData> symbols = new List<SymbolData>();
+        List<NumberData> numbers = [];
+        List<SymbolData> symbols = [];
 
         for (int j = 0; j < input.Length; ++j)
         {
             string line = input[j];
-
-            NumberData? number = null;
+            int? start = null;
 
             for (int i = 0; i < line.Length; ++i)
             {
-                
                 if (char.IsDigit(line[i]))
                 {
-                    int digit = int.Parse($"{line[i]}");
-                    if (number == null)
-                    {
-                        number = new NumberData { Value = digit, Start = Tuple.Create(j, i) };
-                        numbers.Add(number);
-                    }
-                    else
-                    {
-                        number.Value = number.Value * 10 + digit;
-                    }
+                    start ??= i;
                 }
                 else 
                 {
-                    if (number != null)
+                    if (start is int st)
                     {
-                        number.End = Tuple.Create(j,i - 1);
-                        number = null;
+                        numbers.Add(new NumberData 
+                        { 
+                            Value = int.Parse(line[st..i]),
+                            Start = Tuple.Create(j, st),
+                            End = Tuple.Create(j, i - 1) 
+                        });
+                        start = null;
                     }
                     
                     if (line[i] != '.')
@@ -46,36 +40,32 @@ class Day3
                 }
             }
 
-            if (number != null)
+            if (start is int s)
             {
-                number.End = Tuple.Create(j, line.Length - 1);
+                numbers.Add(new NumberData 
+                { 
+                    Value = int.Parse(line[s..]),
+                    Start = Tuple.Create(j, s),
+                    End = Tuple.Create(j, line.Length - 1) 
+                });
             }
         }
 
-        int sum = 0;
-        foreach(var number in numbers)
-        {
-            
-            if (symbols.Any(s => SymbolAdjacent(s, number)))
-            {
-                sum += number.Value;
-            }
-        }
+        int sum = numbers
+                .Where(n => symbols.Any(s => SymbolAdjacent(s, n)))
+                .Select(n => n.Value).Sum();
 
         Console.WriteLine($"sum = {sum}");
 
         Console.WriteLine("Running Day 3 - Part 2");
 
         sum = 0;
-        foreach (var symbol in symbols)
+        foreach (var symbol in symbols.Where(s => s.Symbol == '*'))
         {
-            if (symbol.Symbol == '*')
+            var adjNumbers = numbers.Where(n => SymbolAdjacent(symbol, n)).ToList();
+            if (adjNumbers.Count == 2)
             {
-                var adjNumbers = numbers.Where(n => SymbolAdjacent(symbol, n)).ToList();
-                if (adjNumbers.Count == 2)
-                {
-                    sum += adjNumbers[0].Value * adjNumbers[1].Value;
-                }
+                sum += adjNumbers[0].Value * adjNumbers[1].Value;
             }
         }
         
@@ -88,21 +78,18 @@ class Day3
             WithinRange(symbol.Position.Item2, number.Start.Item2 - 1, number.End.Item2 + 1);
     }
 
-    private bool WithinRange(int x, int a, int b)
-    {
-        return a <= x && x <= b;
-    }
+    private bool WithinRange(int x, int a, int b) => a <= x && x <= b;
 
     class SymbolData
     {
-        public char Symbol;
-        public Tuple<int, int> Position;
+        public required char Symbol;
+        public required Tuple<int, int> Position;
     }
 
     class NumberData
     {
-        public int Value;
-        public Tuple<int, int> Start;
-        public Tuple<int, int> End;
+        public required int Value;
+        public required Tuple<int, int> Start;
+        public required Tuple<int, int> End;
     }
 }
