@@ -3,4 +3,5 @@ Console.WriteLine("\n🎅🎅🎅🎅🎅 ADVENT OF CODE 2023 🎅🎅🎅🎅�
 
 // await new Day1().Run();
 // await new Day2().Run();
-await new Day3().Run();
+// await new Day3().Run();
+await new Day4().Run();
