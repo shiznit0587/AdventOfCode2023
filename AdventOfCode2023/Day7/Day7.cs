@@ -11,6 +11,10 @@ class Day7
         Console.WriteLine($"Total winnings = {hands.Select((h, i) => h.Bid * (i + 1)).Sum()}");
 
         Console.WriteLine("Running Day 7 - Part 2");
+
+        hands = hands.OrderBy(h => h.JokerStrength).ToList();
+
+        Console.WriteLine($"Total winnings = {hands.Select((h, i) => h.Bid * (i + 1)).Sum()}");
     }
 
     enum HandType
@@ -28,39 +32,56 @@ class Day7
     {
         public readonly string Cards;
         public readonly int Bid;
-        readonly int[] LabelCounts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        public int Strength;
+        public readonly int Strength;
+        public readonly int JokerStrength;
 
-        HandType HandType;
-
-        int[] LabelCountsSorted
-        {
-            get
-            {
-                if (_labelCountsSorted == null)
-                {
-                    _labelCountsSorted = (int[])LabelCounts.Clone();
-                    Array.Sort(_labelCountsSorted);
-                    Array.Reverse(_labelCountsSorted);
-                }
-                return _labelCountsSorted;
-            }
-        }
-        private int[]? _labelCountsSorted;
+        readonly HandType HandType;
+        readonly HandType JokerHandType;
 
         public static Hand ParseHand(string line)
         {
             var split = line.Split(" ");
-            var hand = new Hand(split[0], int.Parse(split[1]));
+            return new Hand(split[0], int.Parse(split[1]));
+        }
 
-            foreach (var c in hand.Cards)
+        Hand(string cards, int bid)
+        {
+            Cards = cards;
+            Bid = bid;
+
+            int[] labelCounts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+            foreach (var c in Cards)
             {
-                var idx = char.IsDigit(c) ? c - '2' : 8 + "TJQKA".IndexOf(c);
-                hand.LabelCounts[idx]++;
-                hand.Strength = (hand.Strength << 4) | idx;
+                var idx = "23456789TJQKA".IndexOf(c);
+                labelCounts[idx]++;
+                Strength = (Strength << 4) | idx;
+                idx = "J23456789TQKA".IndexOf(c);
+                JokerStrength = (JokerStrength << 4) | idx;
             }
+            
+            int[] labelCountsSorted = (int[])labelCounts.Clone();
+            Array.Sort(labelCountsSorted);
+            Array.Reverse(labelCountsSorted);
 
-            hand.HandType = hand.LabelCountsSorted switch
+            HandType = DetermineHandType(labelCountsSorted);
+            Strength = (Convert.ToInt32(HandType) << 20) | Strength;
+
+            var jokers = labelCounts[9];
+            labelCounts[9] = 0;
+            labelCountsSorted = (int[])labelCounts.Clone();
+
+            Array.Sort(labelCountsSorted);
+            Array.Reverse(labelCountsSorted);
+            labelCountsSorted[0] += jokers;
+
+            JokerHandType = DetermineHandType(labelCountsSorted);
+            JokerStrength = (Convert.ToInt32(JokerHandType) << 20) | JokerStrength;
+        }
+
+        private static HandType DetermineHandType(int[] labelCounts)
+        {
+            return labelCounts switch
             {
                 [5, ..] => HandType.FiveOfAKind,
                 [4, ..] => HandType.FourOfAKind,
@@ -70,16 +91,6 @@ class Day7
                 [2, 1, 1, 1, ..] => HandType.OnePair,
                 _ => HandType.HighCard
             };
-
-            hand.Strength = (Convert.ToInt32(hand.HandType) << 20) | hand.Strength;
-
-            return hand;
-        }
-
-        Hand(string cards, int bid)
-        {
-            Cards = cards;
-            Bid = bid;
         }
     }
 }
