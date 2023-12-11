@@ -6,22 +6,32 @@ class Day9
 
         Console.WriteLine("Running Day 9 - Part 1");
 
-        var sum = input.Select(l => l.Split(' ').Select(int.Parse).ToList()).Select(Extrapolate).Sum();
+        var extrapolations = input.Select(l => l.Split(' ').Select(int.Parse).ToList()).Select(Extrapolate).ToList();
 
-        Console.WriteLine($"Sum of extrapolated values = {sum}");
+        Console.WriteLine($"Sum of extrapolated values = {extrapolations.Select(e => e.Item2).Sum()}");
 
         Console.WriteLine("Running Day 9 - Part 2");
+
+        Console.WriteLine($"Sum of extrapolated values = {extrapolations.Select(e => e.Item1).Sum()}");
     }
 
-    public int Extrapolate(List<int> sequence)
+    public (int, int) Extrapolate(List<int> sequence)
     {
-        int extrapolation = 0;
+        List<List<int>> histories = [sequence];
         while (sequence.Any(v => v != 0))
         {
-            extrapolation += sequence.Last();
             sequence = Reduce(sequence);
+            histories.Add(sequence);
         }
-        return extrapolation;
+
+        histories.Reverse();
+
+        (int exB, int exF) = (0, 0);
+        foreach (var history in histories)
+        {
+            (exB, exF) = (history.First() - exB, history.Last() + exF);
+        }
+        return (exB, exF);
     }
 
     public List<int> Reduce(List<int> sequence)
