@@ -6,66 +6,94 @@ class Day12
 
         Console.WriteLine("Running Day 12 - Part 1");
 
-        int validArrangementSum = 0;
+        int matchCountSum = 0;
         foreach (var line in input)
         {
             var parts = line.Split(' ');
-            var counts = parts[1].Split(',');
-            var damagedRegions = counts.Select(int.Parse).ToList();
-            var totalDamaged = damagedRegions.Sum();
-            var knownDamaged = parts[0].Count(c => c == '#');
-            var unknownDamaged = totalDamaged - knownDamaged;
-            var unknownIndexes = parts[0].Select((c, i) => c == '?' ? i : -1).Where(i => i != -1).ToList();
-            var unknowns = unknownIndexes.Count;
+            List<char> row = [..parts[0]];
+            var groups = parts[1].Split(',').Select(int.Parse).ToList();
 
-            var permutations = NChooseK(unknownIndexes, unknownDamaged).ToList();
-
-            int validArrangements = 0;
-            foreach (var permutation in permutations)
-            {
-                var testLine = string.Join("", line.Select((c, i) => 
-                {
-                    return c switch
-                    {
-                        '#' => '#',
-                        '.' => '.',
-                        _ when permutation.Contains(i) => '#',
-                        _ => '.'
-                    };
-                }));
-
-                if (testLine.Split('.', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Length).SequenceEqual(damagedRegions))
-                {
-                    ++validArrangements;
-                }
-            }
-
-            validArrangementSum += validArrangements;
+            int matches = CountMatches(row, groups);
+            matchCountSum += matches;
         }
 
-        Console.WriteLine($"Valid Arrangements = {validArrangementSum}");
-        // I input answer 7715 and it was too low...
+        Console.WriteLine($"Valid Arrangements = {matchCountSum}");
 
         Console.WriteLine("Running Day 12 - Part 2");
     }
 
-    private static IEnumerable<HashSet<int>> NChooseK(List<int> n, int k, HashSet<int>? choices = null)
+    private static int CountMatches(List<char> row, List<int> groups, int i = 0, int currentGroupSize = 0)
     {
-        choices ??= [];
-
-        for (int i = 0; i < n.Count; ++i)
+        if (i == row.Count)
         {
-            var option = n[i];
-            var remainingN = n[(i + 1)..];
-
-            var choicesWithOption = choices.ToHashSet();
-            choicesWithOption.Add(option);
-
-            if (k == 1)
-                yield return choicesWithOption;
+            if (groups.Count == 1 && currentGroupSize == groups[0])
+            {
+                return 1;
+            }
+            else if (groups.Count == 0 && currentGroupSize == 0)
+            {
+                return 1;
+            }
             else
-                foreach (var response in NChooseK(remainingN, k - 1, choicesWithOption))
-                    yield return response;
+            {
+                return 0;
+            }
+        }
+
+        if (row[i] == '.')
+        {
+            if (groups.Count == 0 && currentGroupSize == 0)
+            {
+                // valid so far, keep going
+                return CountMatches(row, groups, i + 1, currentGroupSize);
+            }
+            else
+            {
+                if (currentGroupSize == 0)
+                {
+                    // keep moving
+                    return CountMatches(row, groups, i + 1, currentGroupSize);
+                }
+                // See if the previous group matches the size of the first unmatched group
+                if (groups[0] == currentGroupSize)
+                {
+                    return CountMatches(row, groups[1..], i + 1, 0);
+                }
+                else
+                {
+                    // This means groups[0] was unsatisfied.
+                    return 0;
+                }
+            }
+        }
+        else if (row[i] == '#')
+        {
+            if (groups.Count == 0)
+            {
+                // no groups left but extra damaged spring.
+                return 0;
+            }
+            // See if the current group's size is <= the first unmatched group
+
+            else if (currentGroupSize < groups[0])
+            {
+                // Then we can add one and still be a match. Try it.
+                return CountMatches(row, groups, i + 1, currentGroupSize + 1);
+            }
+            else
+            {
+                // we make too big a group to match.
+                return 0;
+            }
+        }
+        else // if (row[i] == '?')
+        {
+            // Try a #
+            List<char> testDamaged = [..row[0..i] , '#', ..row[(i + 1)..]];
+            // Try a .
+            List<char> testOperational = [..row[0..i], '.', ..row[(i + 1)..]];
+
+            return CountMatches(testDamaged, groups, i, currentGroupSize) + CountMatches(testOperational, groups, i, currentGroupSize);
         }
     }
 }
