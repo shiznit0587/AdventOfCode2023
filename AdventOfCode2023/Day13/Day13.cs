@@ -17,52 +17,41 @@ class Day13
             }
         patterns.Add(new([.. input[patternStart..]]));
 
-        var (cols, rows) = (0, 0);
-        foreach (var pattern in patterns)
+        var (sum1, sum2) = (0, 0);
+        foreach (var p in patterns)
         {
-            (bool split, int line) = FindSplit(pattern.Rows);
-            if (split)
-            {
-                rows += line;
-                continue;
-            }
-
-            (split, line) = FindSplit(pattern.Cols);
-            cols += line;
+            var split = p.FindSplits().First();
+            sum1 += SplitToNotesValue(split);
+            sum2 += SplitToNotesValue(GetCoords(p.Rows.Count, p.Cols.Count)
+                .Select(c => p.Smudged(c.x, c.y).FindSplits().Where(s => s != split).ToList())
+                .Where(splits => splits.Count != 0)
+                .First().First());
         }
 
-        Console.WriteLine($"Summary of notes = {cols + 100 * rows}");
-
+        Console.WriteLine($"Summary of notes 1 = {sum1}");
         Console.WriteLine("Running Day 13 - Part 2");
+        Console.WriteLine($"Summary of notes 2 = {sum2}");
     }
 
-    private static (bool, int) FindSplit(List<string> lines)
-    {
-        (bool reflectionLine, double i) = (true, 0.5);
-
-        for (; i < lines.Count - 1; ++i)
+    private static int SplitToNotesValue((Orientation? orientation, int line) split) =>
+        split switch
         {
-            reflectionLine = true;
-            var (left, right) = ((int)Math.Floor(i), (int)Math.Ceiling(i));
+            (Orientation.Horizontal, int l) => l * 100,
+            (Orientation.Vertical, int l) => l,
+            _ => 0
+        };
 
-            while (left >= 0 && right < lines.Count)
-            {
-                if (lines[left] != lines[right])
-                {
-                    reflectionLine = false;
-                    break;
-                }
-                --left;
-                ++right;
-            }
+    private static IEnumerable<(int x, int y)> GetCoords(int xMax, int yMax)
+    {
+        for (int x = 0; x < xMax; ++x)
+            for (int y = 0; y < yMax; ++y)
+                yield return (x, y);
+    }
 
-            if (reflectionLine)
-            {
-                break;
-            }
-        }
-
-        return (reflectionLine, (int)Math.Ceiling(i));
+    enum Orientation
+    {
+        Horizontal,
+        Vertical
     }
 
     class Pattern
@@ -78,5 +67,58 @@ class Day13
             for (int i = 0; i < Rows[0].Length; ++i)
                 Cols.Add(string.Join("", Rows.Select(r => r[i])));
         }
+
+        Pattern(List<string> rows, List<string> cols)
+        {
+            Rows = rows;
+            Cols = cols;
+        }
+
+        public IEnumerable<(Orientation orientation, int line)> FindSplits()
+        {
+            foreach (int line in FindSplits(Rows))
+                yield return (Orientation.Horizontal, line);
+
+            foreach (int line in FindSplits(Cols))
+                yield return (Orientation.Vertical, line);
+        }
+
+        private static IEnumerable<int> FindSplits(List<string> lines)
+        {
+            for (double i = 0.5; i < lines.Count - 1; ++i)
+            {
+                bool reflectionLine = true;
+                var (left, right) = ((int)Math.Floor(i), (int)Math.Ceiling(i));
+
+                while (left >= 0 && right < lines.Count)
+                {
+                    if (lines[left] != lines[right])
+                    {
+                        reflectionLine = false;
+                        break;
+                    }
+                    --left;
+                    ++right;
+                }
+
+                if (reflectionLine)
+                {
+                    yield return (int)Math.Ceiling(i);
+                }
+            }
+        }
+
+        public Pattern Smudged(int x, int y)
+        {
+            Pattern p = new([..Rows], [..Cols]);
+
+            p.Rows[x] = string.Join("", p.Rows[x].Select((c, i) => FixSmudge(c, i, y)));
+            p.Cols[y] = string.Join("", p.Cols[y].Select((c, i) => FixSmudge(c, i, x)));
+
+            return p;
+        }
+
+        private static char FixSmudge(char c, int idx, int smudgeIdx) =>
+            idx == smudgeIdx ? (c == '#' ? '.' : '#') : c;
     }
 }
